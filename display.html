@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c8102e">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DISPLAY SCOREBOARD</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#12151b;--aka:#c8102e;--ao:#1550c8;--gold:#e0a800}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:#fff;font-family:"Barlow Condensed",sans-serif;height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden}
+
+.board{display:grid;grid-template-columns:1fr minmax(280px,360px) 1fr;gap:20px;width:100%;max-width:1600px;height:90vh}
+.side{border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px;position:relative;justify-content:space-between}
+.aka{background:var(--aka)}.ao{background:var(--ao)}
+
+.winner-badge{
+  display:none;
+  background:var(--gold);color:#000;font-weight:800;font-size:36px;text-align:center;padding:8px;border-radius:8px;
+  animation: pulse 1s infinite alternate;
+}
+.side.is-winner .winner-badge{display:block}
+@keyframes pulse{0%{transform:scale(1)}100%{transform:scale(1.05)}}
+
+.lbl{font-size:70px;font-weight:800;text-align:center;line-height:1}
+.name-disp{font-size:42px;font-weight:800;text-align:center;text-transform:uppercase;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px}
+.perg-disp{font-size:28px;font-weight:700;text-align:center;text-transform:uppercase;opacity:0.9}
+.score{font-size:280px;font-weight:800;text-align:center;line-height:0.85}
+
+.bot-info{display:flex;justify-content:space-between;align-items:center}
+.sen-tag{font-size:24px;font-weight:800;padding:6px 16px;border-radius:6px;background:rgba(0,0,0,0.3);border:2px solid #fff;opacity:0.3}
+.sen-tag.on{background:var(--gold);color:#000;border-color:var(--gold);opacity:1}
+
+.penaltys{display:flex;gap:6px;align-items:center}
+.penaltys b{font-size:20px;margin-right:4px}
+.pen-box{width:38px;height:38px;border:2px solid #fff;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;background:rgba(0,0,0,0.2)}
+.pen-box.on{background:#fff;color:#000}
+
+/* MID DISPLAY */
+.mid{
+  background: linear-gradient(135deg, var(--aka) 50%, var(--ao) 50%);
+  border-radius:16px;padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.time-box{background:#fff;border-radius:16px;padding:20px;width:100%;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,0.3)}
+.time{font-size:130px;font-weight:800;color:#111;line-height:1}
+.time.low{color:var(--aka)}
+</style>
+</head>
+<body>
+
+<div class="board">
+  <!-- AKA -->
+  <section class="side aka" id="s-aka">
+    <div>
+      <div class="winner-badge">WINNER ★</div>
+      <div class="lbl">AKA</div>
+      <div class="name-disp" id="n-aka">-</div>
+      <div class="perg-disp" id="p-aka">-</div>
+    </div>
+    <div class="score" id="sc-aka">0</div>
+    <div class="bot-info">
+      <div class="sen-tag" id="sen-aka">SENSHU</div>
+      <div class="penaltys" id="pen-aka"></div>
+    </div>
+  </section>
+
+  <!-- MID TIMER -->
+  <section class="mid">
+    <div class="time-box">
+      <div class="time" id="time">3:00</div>
+    </div>
+  </section>
+
+  <!-- AO -->
+  <section class="side ao" id="s-ao">
+    <div>
+      <div class="winner-badge">WINNER ★</div>
+      <div class="lbl">AO</div>
+      <div class="name-disp" id="n-ao">-</div>
+      <div class="perg-disp" id="p-ao">-</div>
+    </div>
+    <div class="score" id="sc-ao">0</div>
+    <div class="bot-info">
+      <div class="sen-tag" id="sen-ao">SENSHU</div>
+      <div class="penaltys" id="pen-ao"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const channel = new BroadcastChannel('karate_scoreboard');
+const PEN = ['C1','C2','C3','HC','H'];
+
+channel.onmessage = (event) => {
+  const S = event.data;
+  renderDisplay(S);
+};
+
+function fmt(t){
+  if(t<10&&t>0)return '0:0'+t.toFixed(1);
+  const s=Math.ceil(t);
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+
+function renderDisplay(S){
+  ['aka','ao'].forEach(k=>{
+    document.getElementById('n-'+k).textContent = S[k].name || 'NAMA PESERTA';
+    document.getElementById('p-'+k).textContent = S[k].perg || 'PERGURUAN';
+    document.getElementById('sc-'+k).textContent = S[k].pts;
+    
+    // Senshu
+    const senEl = document.getElementById('sen-'+k);
+    if(S[k].sen) senEl.classList.add('on');
+    else senEl.classList.remove('on');
+
+    // Penalti
+    document.getElementById('pen-'+k).innerHTML = '<b>P:</b>' + PEN.map((p,i)=>
+      `<div class="pen-box ${S[k].pen > i ? 'on':''}">${p}</div>`
+    ).join('');
+
+    // Pemenang
+    const sideEl = document.getElementById('s-'+k);
+    if(S.winner === k) sideEl.classList.add('is-winner');
+    else sideEl.classList.remove('is-winner');
+  });
+
+  // Timer
+  const timeEl = document.getElementById('time');
+  timeEl.textContent = fmt(S.t);
+  if(S.t <= 15 && S.t > 0) timeEl.classList.add('low');
+  else timeEl.classList.remove('low');
+}
+</script>
+</body>
+</html>
